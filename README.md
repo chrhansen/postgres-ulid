@@ -9,7 +9,7 @@ E.g.
 SELECT generate_ulid();
      generate_ulid
 -----------------------
- 1GND9JNHM7N2EQ5PHYAV5RQ8H
+ 01GNT4FG7JEVZ89X7SCPDE9MP0
 (1 row)
 ```
 
@@ -62,7 +62,7 @@ Instead, herein is proposed ULID:
 SELECT generate_ulid();
        generate_ulid
 ---------------------------
- 1GND90FFY44FYAJTW6BS1010N
+ 01GNT4FG7JEVZ89X7SCPDE9MP0
 (1 row)
 ```
 
@@ -110,7 +110,7 @@ Prefixing a default ULID requires explicitly setting output base to 'base32'.
 SELECT generate_ulid('base32', 'account', '-');
            generate_ulid
 -----------------------------------
- account-1GND9AXJNVCJ2PK8JGW52Z2KX
+ account-01GNT4FG7JEVZ89X7SCPDE9MP0
 (1 row)
 ```
 
