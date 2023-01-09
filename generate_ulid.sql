@@ -32,7 +32,7 @@ BEGIN
     -- Remove the leading '\x' and just keep the last 32 hex-characters
     return_string := SUBSTRING(ulid::text, 3, 32);
 
-    CASE  lower(output_base)
+    CASE lower(output_base)
     WHEN 'base32' THEN
         return_string := hex_to_base(return_string, base32_alphabet);
         IF ulid_base32_length - length(return_string) > 0 THEN
