@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ULID according to the spec: https://github.com/ulid/spec
   -- generate_ulid() => 1GND65M56YS10B35V121ZS4D4
--- With prefix output in base58
+-- With prefix output in base58 (still sortable in Base 58)
   -- generate_ulid('base58', 'user') => user_BtnhF9Zpi2zMFsUfMXTCR
 -- More usage: https://github.com/chrhansen/postgres-ulid#usage
 
@@ -12,15 +12,15 @@ CREATE OR REPLACE FUNCTION generate_ulid(output_base text default 'base32', -- a
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    timestamp  BYTEA := E'\\000\\000\\000\\000\\000\\000';
-    unix_time  BIGINT;
-    ulid       BYTEA;
+    timestamp       BYTEA := E'\\000\\000\\000\\000\\000\\000';
+    unix_time       BIGINT;
+    ulid            BYTEA;
 
     base32_alphabet TEXT := '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; -- Crockford's
     base58_alphabet TEXT := '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'; -- Bitcoin
 
-    ulid_length INT := 26;
-    return_string TEXT := '';
+    ulid_length     INT := 26;
+    return_string   TEXT := '';
 BEGIN
     -- 6 timestamp bytes
     unix_time := (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT;
@@ -38,13 +38,13 @@ BEGIN
     WHEN 'base32' THEN
         return_string := hex_to_base(return_string, base32_alphabet);
         IF ulid_length - length(return_string) > 0 THEN
-           -- This will be max. one (1) missing leading zero (0)
+           -- There will maximum be one (1) missing leading zero (0)
            return_string := repeat('0', ulid_length - length(return_string)) || return_string;
         END IF;
     WHEN 'base58' THEN
         return_string := hex_to_base(return_string, base58_alphabet);
     WHEN 'uuid' THEN
-       -- Do nothing. The user can cast to uuid: generate_ulid('uuid')::uuid
+       -- Do nothing, already a "hex-string". Can be cast to uuid: generate_ulid('uuid')::uuid
     ELSE
         RAISE EXCEPTION 'Unsupported base_name %', base_name
         USING HINT = 'Should be base32, base58, or uuid.';
@@ -60,24 +60,20 @@ $$;
 
 CREATE OR REPLACE FUNCTION hex_to_base(hexstr TEXT, base_alphabet TEXT) RETURNS TEXT AS $$
 DECLARE
-    bytes BYTEA := ('\x' || hexstr)::BYTEA;
+    bytes          BYTEA := ('\x' || hexstr)::BYTEA;
     leading_zeroes INT := 0;
-    -- There are max. 40 (base10) digits in a 32 digit  hex
-    num DECIMAL(40,0) := 0;
-    base DECIMAL(40,0) := 1;
-
-    byte_value INT;
-    byte_val INT;
-    byte_values INT[] DEFAULT ARRAY[]::INT[];
-    modulo INT;
-
-    -- The final encoded string
-    base_enc_string TEXT := '';
+    -- There are max. 40 (base10) digits in a 32 digit hex-number
+    num            DECIMAL(40,0) := 0;
+    base           DECIMAL(40,0) := 1;
+    byte_value     INT;
+    byte_val       INT;
+    byte_values    INT[] DEFAULT ARRAY[]::INT[];
+    modulo         INT;
+    encoded_str    TEXT := '';
 BEGIN
-    -- This was built to convert 128-bit (32 chars hex) UUIDs to another base,
-    -- so we'll not promise anything else. DECIMAL can take up to ~131000 digits
-    -- so we can probably just bump the precision of 'num' and 'base', but that's
-    -- for another time.
+    -- This was built to convert 128-bit (32 hex-chars) UUIDs to another base,
+    -- so we'll only promise that. Postgres DECIMAL can be up to ~131000 digits
+    -- so bump the scale of 'num' and 'base' to convert bigger hex-numbers.
     IF length(hexstr) != 32 THEN
         RAISE EXCEPTION 'Hex-string >%< should be 32 characters long, but is % char(s).', hexstr, length(hexstr);
     END IF;
@@ -91,7 +87,7 @@ BEGIN
             leading_zeroes := 0;
             num := num + (base * byte_value);
         END IF;
-        base := base * 256;
+        base := base * 256; -- Two (2) hex-digits: 16 * 16 = 256
     END LOOP;
 
     -- Convert the up to 40-digit 'num', to the digits in 'base_alphabet'
@@ -101,16 +97,16 @@ BEGIN
         byte_values := array_append(byte_values, modulo);
     END LOOP;
 
-    -- Convert the byte_values using characters from 'base_alphabet'. By
-    -- prepending to 'base_enc_string' the order of 'byte_values' is reversed.
+    -- Convert the 'byte_values' using characters from 'base_alphabet'. By
+    -- prepending to 'encoded_str' the order of 'byte_values' is reversed.
     FOREACH byte_val IN ARRAY byte_values
     LOOP
-        base_enc_string := SUBSTRING(base_alphabet, byte_val + 1, 1) || base_enc_string;
+        encoded_str := SUBSTRING(base_alphabet, byte_val + 1, 1) || encoded_str;
     END LOOP;
 
     -- Prepend first 'base_alphabet'-character to account for leading zeroes in 'hexstr'
-    base_enc_string := repeat(SUBSTRING(base_alphabet, 1, 1), leading_zeroes) || base_enc_string;
+    encoded_str := repeat(SUBSTRING(base_alphabet, 1, 1), leading_zeroes) || encoded_str;
 
-    RETURN base_enc_string;
+    RETURN encoded_str;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE STRICT;
