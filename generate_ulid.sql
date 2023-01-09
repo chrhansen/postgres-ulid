@@ -12,15 +12,13 @@ CREATE OR REPLACE FUNCTION generate_ulid(output_base text default 'base32', -- a
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    timestamp       BYTEA := E'\\000\\000\\000\\000\\000\\000';
-    unix_time       BIGINT;
-    ulid            BYTEA;
-
-    base32_alphabet TEXT := '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; -- Crockford's
-    base58_alphabet TEXT := '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'; -- Bitcoin
-
-    ulid_length     INT := 26;
-    return_string   TEXT := '';
+    timestamp          BYTEA := E'\\000\\000\\000\\000\\000\\000';
+    unix_time          BIGINT;
+    ulid               BYTEA;
+    base32_alphabet    TEXT := '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; -- Crockford's
+    base58_alphabet    TEXT := '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'; -- Bitcoin
+    ulid_base32_length INT := 26;
+    return_string      TEXT := '';
 BEGIN
     -- 6 timestamp bytes
     unix_time := (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT;
@@ -37,9 +35,9 @@ BEGIN
     CASE  lower(output_base)
     WHEN 'base32' THEN
         return_string := hex_to_base(return_string, base32_alphabet);
-        IF ulid_length - length(return_string) > 0 THEN
+        IF ulid_base32_length - length(return_string) > 0 THEN
            -- There will maximum be one (1) missing leading zero (0)
-           return_string := repeat('0', ulid_length - length(return_string)) || return_string;
+           return_string := repeat('0', ulid_base32_length - length(return_string)) || return_string;
         END IF;
     WHEN 'base58' THEN
         return_string := hex_to_base(return_string, base58_alphabet);
