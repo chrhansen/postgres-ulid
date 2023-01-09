@@ -21,10 +21,10 @@ SELECT generate_ulid('base58', 'user');
  user_BtnmF6RFs4Y2u2xeyE8V9
 (1 row)
 ```
+##### Looking for something _even_ simpler?
+See https://github.com/chrhansen/pg-id. `pg-id` is a postgres function generating: prefixed-, sortable-, Base58-IDs.
 
 Official specification page: https://github.com/ulid/spec
-
-
 
 <h1 align="center">
 	<br>
