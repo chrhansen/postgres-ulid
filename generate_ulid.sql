@@ -24,12 +24,10 @@ DECLARE
 BEGIN
     -- 6 timestamp bytes
     unix_time := (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT;
-    timestamp := SET_BYTE(timestamp, 0, (unix_time >> 40)::BIT(8)::INTEGER);
-    timestamp := SET_BYTE(timestamp, 1, (unix_time >> 32)::BIT(8)::INTEGER);
-    timestamp := SET_BYTE(timestamp, 2, (unix_time >> 24)::BIT(8)::INTEGER);
-    timestamp := SET_BYTE(timestamp, 3, (unix_time >> 16)::BIT(8)::INTEGER);
-    timestamp := SET_BYTE(timestamp, 4, (unix_time >> 8)::BIT(8)::INTEGER);
-    timestamp := SET_BYTE(timestamp, 5, unix_time::BIT(8)::INTEGER);
+    FOR i IN 0..5 LOOP
+        timestamp := SET_BYTE(timestamp, i, (unix_time >> (40 - i * 8))::BIT(8)::INTEGER);
+    END LOOP;
+
     -- 10 entropy bytes
     ulid := timestamp || gen_random_bytes(10);
 
